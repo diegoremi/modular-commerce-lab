@@ -1,6 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
-import { nxE2EPreset } from '@nx/playwright/preset';
-import { workspaceRoot } from '@nx/devkit';
+import { createRequire } from 'node:module';
+
+// Load Nx's CommonJS modules with Node's loader rather than Playwright's
+// ESM loader, which does not provide the require cache used by Nx.
+const require = createRequire(import.meta.url);
+const { nxE2EPreset } =
+  require('@nx/playwright/preset') as typeof import('@nx/playwright/preset');
+const { workspaceRoot } = require('@nx/devkit') as typeof import('@nx/devkit');
 
 // For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';

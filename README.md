@@ -30,6 +30,31 @@ These targets are either [inferred automatically](https://nx.dev/concepts/inferr
 
 [More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 
+## Run end-to-end tests
+
+Install the browsers after installing or updating Playwright:
+
+```sh
+pnpm exec playwright install chromium firefox webkit
+```
+
+Run the suite in all three browsers. Nx starts the development server automatically:
+
+```sh
+pnpm exec nx e2e modular-commerce-lab-e2e
+```
+
+To run Chromium only:
+
+```sh
+pnpm exec nx run modular-commerce-lab-e2e:e2e -- --project=chromium
+```
+
+On macOS 27, Firefox may fail to launch with `Could not find profile folder`
+([upstream Playwright issue](https://github.com/microsoft/playwright/issues/42768)).
+Chromium and WebKit can still run independently by forwarding `--project=chromium` or
+`--project=webkit` after the `--` separator in the Nx command.
+
 ## Add new projects
 
 While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
