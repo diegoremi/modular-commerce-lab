@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
+import { FeatureProductList } from '@modular-commerce-lab/feature-product-list';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [FeatureProductList, RouterModule],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',

@@ -1,1 +1,14 @@
-<p>FeatureProductList works!</p>
+<section aria-labelledby="products-title">
+  <h1 id="products-title">Productos</h1>
+
+  <ul class="products">
+    @for (product of products$ | async; track product.id) {
+    <li class="product">
+      <h2>{{ product.name }}</h2>
+      <p>{{ product.category }}</p>
+      <p class="price">Precio: {{ product.price }}</p>
+      <p>{{ product.available ? 'Disponible' : 'No disponible' }}</p>
+    </li>
+    }
+  </ul>
+</section>
