@@ -1,11 +1,24 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { map, Observable, of } from 'rxjs';
 import { Product } from '@modular-commerce-lab/catalog/models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ProductService {
+  public searchProducts(query: string): Observable<Product[]> {
+    const term = query.trim().toLowerCase();
+    return this.getProducts().pipe(
+      map((products) =>
+        products.filter(
+          (product) =>
+            product.name.toLowerCase().includes(term) ||
+            product.category.toLowerCase().includes(term),
+        ),
+      ),
+    );
+  }
+
   public getProducts(): Observable<Product[]> {
     // Simulate fetching products from an API or database
     const products: Product[] = [

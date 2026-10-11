@@ -1,20 +1,36 @@
 <section aria-labelledby="products-title">
   <h1 id="products-title">Productos</h1>
 
-  @if (productState$ | async; as state) { @if (state.error) {
-  <p role="alert">No se pudieron cargar los productos.</p>
-  } @else {
-  <ul class="products">
-    @for (product of state.products; track product.id) {
-    <li class="product">
-      <h2>{{ product.name }}</h2>
-      <p>{{ product.category }}</p>
-      <p class="price">Precio: {{ product.price | currency:'USD' }}</p>
-      <p>{{ product.available ? 'Disponible' : 'No disponible' }}</p>
-    </li>
-    } @empty {
-    <li>No hay productos disponibles.</li>
+  <label for="product-search">Buscar productos por nombre o categoría</label>
+  <input
+    id="product-search"
+    type="search"
+    [formControl]="searchControl"
+    placeholder="Ej. Product 1 o Category A"
+  />
+
+  @if (productState$ | async; as state) {
+  <div [attr.aria-busy]="state.status === 'loading'">
+    @if (state.status === 'loading') {
+    <p role="status">Cargando productos...</p>
+    } @else if (state.status === 'error') {
+    <p role="alert">
+      No se pudieron cargar los productos. Prueba otra búsqueda.
+    </p>
+    } @else {
+    <ul class="products" aria-live="polite">
+      @for (product of state.products; track product.id) {
+      <li class="product">
+        <h2>{{ product.name }}</h2>
+        <p>{{ product.category }}</p>
+        <p class="price">Precio: {{ product.price | currency:'USD' }}</p>
+        <p>{{ product.available ? 'Disponible' : 'No disponible' }}</p>
+      </li>
+      } @empty {
+      <li>No se encontraron productos.</li>
+      }
+    </ul>
     }
-  </ul>
-  } }
+  </div>
+  }
 </section>

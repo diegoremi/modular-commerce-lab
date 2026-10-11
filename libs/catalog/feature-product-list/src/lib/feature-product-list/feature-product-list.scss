@@ -28,3 +28,18 @@
 .price {
   font-weight: 600;
 }
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+input[type='search'] {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 30rem;
+  padding: 0.75rem;
+  border: 1px solid #777;
+  border-radius: 0.5rem;
+  font: inherit;
+}

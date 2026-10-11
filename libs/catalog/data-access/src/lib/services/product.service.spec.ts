@@ -70,4 +70,23 @@ describe('ProductService', () => {
       },
     ]);
   });
+  it('should search by name ignoring case and surrounding spaces', async () => {
+    const products = await firstValueFrom(
+      service.searchProducts('  pRoDuCt 2  '),
+    );
+    expect(products.map((product) => product.id)).toEqual(['2']);
+  });
+
+  it('should search by category', async () => {
+    const products = await firstValueFrom(service.searchProducts('category b'));
+    expect(products.map((product) => product.id)).toEqual(['2', '5', '8']);
+  });
+
+  it('should return all products for a blank search', async () => {
+    expect(await firstValueFrom(service.searchProducts('  '))).toHaveLength(8);
+  });
+
+  it('should return no products when the search does not match', async () => {
+    expect(await firstValueFrom(service.searchProducts('missing'))).toEqual([]);
+  });
 });
