@@ -140,6 +140,37 @@ describe('FeatureProductList', () => {
     expect(element.textContent).not.toContain('Teclado');
   });
 
+  it('should cancel on typing and ignore a response arriving before the new debounce expires', () => {
+    const previous = new Subject<Product[]>();
+    const latest = new Subject<Product[]>();
+    const cancelled = vi.fn();
+    const element = render();
+    searchProducts.mockReturnValueOnce(previous.pipe(finalize(cancelled)));
+    searchProducts.mockReturnValueOnce(latest);
+
+    search('teclado');
+    advance();
+    search('monitor');
+    expect(cancelled).toHaveBeenCalledOnce();
+    expect(searchProducts).toHaveBeenCalledTimes(2);
+    expect(element.querySelector('[role="status"]')?.textContent).toContain(
+      'Esperando',
+    );
+
+    advance(150);
+    previous.next([keyboard]);
+    fixture.detectChanges();
+    expect(element.querySelectorAll('.product')).toHaveLength(0);
+    expect(element.textContent).not.toContain('Teclado');
+    expect(searchProducts).toHaveBeenCalledTimes(2);
+
+    advance(150);
+    expect(searchProducts).toHaveBeenLastCalledWith('monitor');
+    latest.next([monitor]);
+    fixture.detectChanges();
+    expect(element.querySelector('.product h2')?.textContent).toBe('Monitor');
+  });
+
   it('should show an empty state when no products match', () => {
     const element = render(of([]));
     expect(element.querySelectorAll('.product')).toHaveLength(0);

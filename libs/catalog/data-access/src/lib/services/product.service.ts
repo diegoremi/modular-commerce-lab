@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { map, Observable, of } from 'rxjs';
+import { map, Observable, timer } from 'rxjs';
 import { Product } from '@modular-commerce-lab/catalog/models';
 
 @Injectable({
@@ -20,7 +20,7 @@ export class ProductService {
   }
 
   public getProducts(): Observable<Product[]> {
-    // Simulate fetching products from an API or database
+    // Cold, cancelable simulation: no response is produced until the timer fires.
     const products: Product[] = [
       {
         id: '1',
@@ -79,6 +79,6 @@ export class ProductService {
         available: true,
       },
     ];
-    return of(products);
+    return timer(500).pipe(map(() => products));
   }
 }

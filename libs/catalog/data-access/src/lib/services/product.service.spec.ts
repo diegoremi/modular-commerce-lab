@@ -1,15 +1,26 @@
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
+import { vi } from 'vitest';
+import { Product } from '@modular-commerce-lab/catalog/models';
 import { ProductService } from './product.service';
 
 describe('ProductService', () => {
   let service: ProductService;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     service = new ProductService();
   });
 
+  afterEach(() => vi.useRealTimers());
+
+  async function response(request: Observable<Product[]>) {
+    const result = firstValueFrom(request);
+    await vi.advanceTimersByTimeAsync(500);
+    return result;
+  }
+
   it('should return the product list', async () => {
-    const products = await firstValueFrom(service.getProducts());
+    const products = await response(service.getProducts());
 
     expect(products).toEqual([
       {
@@ -71,22 +82,47 @@ describe('ProductService', () => {
     ]);
   });
   it('should search by name ignoring case and surrounding spaces', async () => {
-    const products = await firstValueFrom(
+    const products = await response(
       service.searchProducts('  pRoDuCt 2  '),
     );
     expect(products.map((product) => product.id)).toEqual(['2']);
   });
 
   it('should search by category', async () => {
-    const products = await firstValueFrom(service.searchProducts('category b'));
+    const products = await response(service.searchProducts('category b'));
     expect(products.map((product) => product.id)).toEqual(['2', '5', '8']);
   });
 
   it('should return all products for a blank search', async () => {
-    expect(await firstValueFrom(service.searchProducts('  '))).toHaveLength(8);
+    expect(await response(service.searchProducts('  '))).toHaveLength(8);
   });
 
   it('should return no products when the search does not match', async () => {
-    expect(await firstValueFrom(service.searchProducts('missing'))).toEqual([]);
+    expect(await response(service.searchProducts('missing'))).toEqual([]);
+  });
+  it('should not emit until the simulated response arrives after 500 ms', () => {
+    const next = vi.fn();
+    const complete = vi.fn();
+    service.searchProducts('Product 2').subscribe({ next, complete });
+    expect(next).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(499);
+    expect(next).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(next).toHaveBeenCalledOnce();
+    expect(next.mock.calls[0][0].map((product: Product) => product.id)).toEqual(
+      ['2'],
+    );
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it('should cancel the simulated response timer when unsubscribed', () => {
+    const next = vi.fn();
+    const subscription = service.searchProducts('Product 2').subscribe(next);
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(100);
+    subscription.unsubscribe();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(1000);
+    expect(next).not.toHaveBeenCalled();
   });
 });

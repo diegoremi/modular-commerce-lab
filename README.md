@@ -1,127 +1,139 @@
-# ModularCommerceLab
+# Modular Commerce Lab
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Laboratorio de Angular y Nx para practicar límites entre capas, formularios reactivos,
+búsquedas con RxJS y pruebas unitarias y E2E. La página inicial muestra ocho productos
+y permite buscar por nombre o categoría.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Ejecutar la aplicación
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
-
-## Run tasks
-
-To run the dev server for your app, use:
+Instala las dependencias con la versión de pnpm indicada en `package.json`:
 
 ```sh
-npx nx serve modular-commerce-lab
+pnpm install --frozen-lockfile
+pnpm exec nx serve modular-commerce-lab
 ```
 
-To create a production bundle:
+Abre http://localhost:4200. Para generar la aplicación de producción:
 
 ```sh
-npx nx build modular-commerce-lab
+pnpm exec nx build modular-commerce-lab
 ```
 
-To see all available targets to run for a project, run:
+## Arquitectura
+
+| Proyecto                   | Ubicación                           | Responsabilidad                                                                                         |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `modular-commerce-lab`     | `apps/modular-commerce-lab`         | Componer features y UI en la aplicación.                                                                |
+| `feature-product-list`     | `libs/catalog/feature-product-list` | Buscador, estados y presentación de productos en su propio template.                                    |
+| `data-access`              | `libs/catalog/data-access`          | `ProductService`, catálogo simulado y filtrado.                                                         |
+| `catalog-models`           | `libs/catalog/models`               | Contrato `Product`, sin dependencias de Angular. Alias público: `@modular-commerce-lab/catalog/models`. |
+| `ui`                       | `libs/shared/ui`                    | Componentes visuales compartidos.                                                                       |
+| `util`                     | `libs/shared/util`                  | Utilidades compartidas.                                                                                 |
+| `modular-commerce-lab-e2e` | `apps/modular-commerce-lab-e2e`     | Pruebas de navegador con Playwright.                                                                    |
+
+Las etiquetas `scope:*` delimitan los dominios y `type:*` delimitan las capas.
+`eslint.config.mjs` aplica ambas restricciones mediante `@nx/enforce-module-boundaries`:
+
+- La app (`scope:app`, `type:app`) importa features y UI de catálogo o compartidas;
+  no accede directamente a data-access, modelos o utilidades.
+- Catálogo puede depender de catálogo y shared. Shared depende solamente de shared.
+- Features pueden importar data-access, UI, utilidades y modelos.
+- Data-access puede importar data-access, utilidades y modelos.
+- UI puede importar UI, utilidades y modelos, respetando también su scope.
+- Utilidades dependen de utilidades; modelos dependen de modelos.
+
+Los imports entre proyectos usan los alias de `tsconfig.base.json` y los `index.ts`
+públicos. Para inspeccionar el grafo:
 
 ```sh
-npx nx show project modular-commerce-lab
+pnpm exec nx graph
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Decisiones de búsqueda
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+`FeatureProductList` usa un `FormControl` no nullable. Normaliza el término con
+`trim()` y minúsculas, y `distinctUntilChanged()` evita repetir términos equivalentes.
+El servicio busca coincidencias parciales en nombre o categoría; un término vacío
+recupera el catálogo completo.
 
-## Run end-to-end tests
+**Cancelamos al cambiar el término, antes de esperar el debounce.** El `switchMap`
+exterior recibe cada término normalizado y cancela tanto la consulta anterior como
+su espera pendiente. Dentro, `timer(300)` implementa el debounce de 300 ms; otro
+`switchMap` inicia la consulta cuando termina la espera. Usar `debounceTime(300)`
+antes del `switchMap` de consulta permitiría que una respuesta anterior se mostrara
+mientras se escribe el siguiente término. Los cambios de espacios o mayúsculas que
+no alteran el término normalizado no cancelan ni repiten consultas.
 
-Install the browsers after installing or updating Playwright:
+La primera consulta comienza inmediatamente, sin debounce. `ProductService`
+simula una respuesta asíncrona de **500 ms** con un observable frío basado en
+`timer`. Desuscribirse cancela el temporizador: no se emite ni se filtra una
+respuesta cancelada. Es una simulación local; todavía no existe una API HTTP.
+Una búsqueda nueva tarda aproximadamente 800 ms entre debounce y respuesta.
+
+El template distingue espera de escritura, carga, resultados, vacío y error.
+Al cambiar el término se retiran los resultados anteriores para no presentarlos
+como resultados de la nueva búsqueda. `catchError` queda dentro de la consulta,
+para que un error no cierre el flujo y otra búsqueda pueda recuperarse.
+`AsyncPipe` administra la suscripción y su limpieza al destruir el componente.
+Los precios usan `CurrencyPipe` con USD provisionalmente; el modelo aún no define moneda.
+
+## Validación
+
+```sh
+# Lint de todos los proyectos con target lint
+pnpm exec nx run-many -t lint
+
+# Contratos de catálogo, sin emitir archivos
+pnpm exec nx typecheck catalog-models
+
+# Pruebas unitarias de librerías y aplicación, sin modo watch
+pnpm exec nx run-many -t test --watch=false
+
+# Compilación de producción y validación de templates Angular
+pnpm exec nx build modular-commerce-lab
+
+# Tipos de la configuración y pruebas E2E
+pnpm exec tsc -p apps/modular-commerce-lab-e2e/tsconfig.json --noEmit
+```
+
+Las librerías Angular usan Vitest con Analog; `util` usa Vitest en Node. La app
+usa Vitest mediante `@angular/build:unit-test`. No hay configuración de Jest.
+
+Los tests del feature sustituyen `ProductService` mediante `TestBed.providers`.
+Temporizadores controlados y observables pendientes comprueban el debounce,
+la deduplicación, los estados, la recuperación de errores y la limpieza de suscripciones.
+El caso de concurrencia verifica que una respuesta anterior llegada **durante los
+300 ms de espera del siguiente término** no aparezca en el template.
+Los tests del servicio comprueban filtrado, emisión diferida y cancelación real del timer.
+
+## Pruebas E2E
+
+Instala los navegadores al instalar o actualizar Playwright:
 
 ```sh
 pnpm exec playwright install chromium firefox webkit
 ```
 
-Run the suite in all three browsers. Nx starts the development server automatically:
-
-```sh
-pnpm exec nx e2e modular-commerce-lab-e2e
-```
-
-To run Chromium only:
+Nx inicia el servidor de desarrollo como dependencia. Para Chromium:
 
 ```sh
 pnpm exec nx run modular-commerce-lab-e2e:e2e -- --project=chromium
 ```
 
-On macOS 27, Firefox may fail to launch with `Could not find profile folder`
-([upstream Playwright issue](https://github.com/microsoft/playwright/issues/42768)).
-Chromium and WebKit can still run independently by forwarding `--project=chromium` or
-`--project=webkit` after the `--` separator in the Nx command.
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
+Para WebKit, cambia a `--project=webkit`. El separador `--` pasa el selector a
+Playwright. Para los tres navegadores:
 
 ```sh
-npx nx g @nx/angular:app demo
+pnpm exec nx e2e modular-commerce-lab-e2e
 ```
 
-To generate a new library, use:
+Las pruebas usan locators con reintentos para verificar título y catálogo, buscar
+por nombre y categoría, mostrar el estado vacío y recuperar los ocho productos
+al limpiar el campo. No usan esperas de tiempo fijo.
 
-```sh
-npx nx g @nx/angular:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+La configuración ESM carga los módulos CommonJS de Nx con `createRequire`, evitando
+el fallo de acceso a `require.cache` del cargador de Playwright.
+En macOS 27, Firefox puede fallar con `Could not find profile folder`
+([incidencia de Playwright](https://github.com/microsoft/playwright/issues/42768)).
+Chromium y WebKit pueden ejecutarse por separado; el problema de Firefox no se
+oculta eliminándolo de la configuración.

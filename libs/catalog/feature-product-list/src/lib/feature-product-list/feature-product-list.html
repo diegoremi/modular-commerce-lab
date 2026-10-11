@@ -10,8 +10,12 @@
   />
 
   @if (productState$ | async; as state) {
-  <div [attr.aria-busy]="state.status === 'loading'">
-    @if (state.status === 'loading') {
+  <div
+    [attr.aria-busy]="state.status === 'loading' || state.status === 'debouncing'"
+  >
+    @if (state.status === 'debouncing') {
+    <p role="status">Esperando a que termines de escribir...</p>
+    } @else if (state.status === 'loading') {
     <p role="status">Cargando productos...</p>
     } @else if (state.status === 'error') {
     <p role="alert">
