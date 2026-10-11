@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/modular-commerce-lab/src",
-  "tags": [],
+  "tags": ["scope:app", "type:app"],
   "targets": {
     "build": {
       "executor": "@angular/build:application",

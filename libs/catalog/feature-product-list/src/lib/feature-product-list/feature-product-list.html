@@ -1,14 +1,20 @@
 <section aria-labelledby="products-title">
   <h1 id="products-title">Productos</h1>
 
+  @if (productState$ | async; as state) { @if (state.error) {
+  <p role="alert">No se pudieron cargar los productos.</p>
+  } @else {
   <ul class="products">
-    @for (product of products$ | async; track product.id) {
+    @for (product of state.products; track product.id) {
     <li class="product">
       <h2>{{ product.name }}</h2>
       <p>{{ product.category }}</p>
-      <p class="price">Precio: {{ product.price }}</p>
+      <p class="price">Precio: {{ product.price | currency:'USD' }}</p>
       <p>{{ product.available ? 'Disponible' : 'No disponible' }}</p>
     </li>
+    } @empty {
+    <li>No hay productos disponibles.</li>
     }
   </ul>
+  } }
 </section>

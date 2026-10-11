@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
+test('shows the product catalog', async ({ page }) => {
   await page.goto('/');
 
-  // Expect h1 to contain a substring.
-  expect(await page.locator('h1').innerText()).toContain('Productos');
+  await expect(
+    page.getByRole('heading', { name: 'Productos', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.product')).toHaveCount(8);
 });

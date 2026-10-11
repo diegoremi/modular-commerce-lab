@@ -1,8 +1,22 @@
 {
-  "name": "models",
+  "name": "catalog-models",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "root": "libs/catalog/models",
   "sourceRoot": "libs/catalog/models",
   "projectType": "library",
-  "tags": ["scope:catalog", "type:models"]
+  "tags": ["scope:catalog", "type:models"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --project libs/catalog/models/tsconfig.json --noEmit"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*.ts",
+        "{projectRoot}/tsconfig.json",
+        "{workspaceRoot}/tsconfig.base.json"
+      ]
+    }
+  }
 }

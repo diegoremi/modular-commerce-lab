@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { Product } from '@modular-commerce-lab/models';
+import { Product } from '@modular-commerce-lab/catalog/models';
 
 @Injectable({
   providedIn: 'root',

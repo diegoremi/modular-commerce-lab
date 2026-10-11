@@ -21,6 +21,14 @@ export default [
               onlyDependOnLibsWithTags: ['*'],
             },
             {
+              sourceTag: 'scope:app',
+              onlyDependOnLibsWithTags: ['scope:catalog', 'scope:shared'],
+            },
+            {
+              sourceTag: 'type:app',
+              onlyDependOnLibsWithTags: ['type:feature', 'type:ui'],
+            },
+            {
               sourceTag: 'scope:catalog',
               onlyDependOnLibsWithTags: ['scope:catalog', 'scope:shared'],
             },
