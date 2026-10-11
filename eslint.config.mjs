@@ -21,24 +21,41 @@ export default [
               onlyDependOnLibsWithTags: ['*'],
             },
             {
+              sourceTag: 'scope:catalog',
+              onlyDependOnLibsWithTags: ['scope:catalog', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:shared',
+              onlyDependOnLibsWithTags: ['scope:shared'],
+            },
+            {
               sourceTag: 'type:feature',
               onlyDependOnLibsWithTags: [
                 'type:data-access',
                 'type:ui',
                 'type:util',
+                'type:models',
               ],
             },
             {
               sourceTag: 'type:data-access',
-              onlyDependOnLibsWithTags: ['type:data-access', 'type:util'],
+              onlyDependOnLibsWithTags: [
+                'type:data-access',
+                'type:util',
+                'type:models',
+              ],
             },
             {
               sourceTag: 'type:ui',
-              onlyDependOnLibsWithTags: ['type:ui', 'type:util'],
+              onlyDependOnLibsWithTags: ['type:ui', 'type:util', 'type:models'],
             },
             {
               sourceTag: 'type:util',
               onlyDependOnLibsWithTags: ['type:util'],
+            },
+            {
+              sourceTag: 'type:models',
+              onlyDependOnLibsWithTags: ['type:models'],
             },
           ],
         },

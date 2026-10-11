@@ -22,7 +22,8 @@
       ],
       "@modular-commerce-lab/data-access": [
         "./libs/catalog/data-access/src/index.ts"
-      ]
+      ],
+      "@modular-commerce-lab/models": ["./libs/catalog/models/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
